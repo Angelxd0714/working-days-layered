@@ -1,0 +1,88 @@
+service: working-days-layered
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-offline
+  - serverless-esbuild
+
+package:
+  patterns:
+    - '!node_modules/.git/**'
+    - '!node_modules/.bin/**'
+    - '!node_modules/aws-sdk/**'
+    - '!**/*'
+    - 'dist/**'
+    - 'node_modules/**'
+    - 'package.json'
+    - '!tsconfig.json'
+    - '!.eslintrc.cjs'
+    - '!.gitignore'
+    - '!.git/**'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: us-east-1
+  environment:
+    NODE_ENV: development
+    NODE_OPTIONS: '--enable-source-maps --experimental-specifier-resolution=node --no-warnings'
+  httpApi:
+    cors: true
+    payload: '2.0'
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: arn:aws:logs:*:*:*
+
+functions:
+  api:
+    handler: dist/handler.handler
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+    environment:
+      NODE_ENV: ${self:provider.environment.NODE_ENV}
+      NODE_OPTIONS: ${self:provider.environment.NODE_OPTIONS}
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    noPrependStageInUrl: true
+    useChildProcesses: true
+    noAuth: true
+    ignoreJWTSignature: true
+    noTimeout: true
+    hideStackTraces: false
+    disableCookieValidation: true
+    noEnvironment: false
+    reloadHandler: true
+    useWorkerThreads: true
+    
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    target: 'node18'
+    platform: 'node'
+    concurrency: 10
+    watch:
+      pattern: 'src/**/*.ts'
+      ignore: '.serverless/**,.build,dist,node_modules,.git'
+    packager: 'npm'
+    packagerOptions:
+      scripts: []
+    exclude: ['aws-sdk']
+    nativeZip: true
+    keepOutputDirectory: false
+    disableIncremental: false
+    excludeNodeModules: false

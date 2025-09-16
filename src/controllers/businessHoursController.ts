@@ -1,5 +1,3 @@
-import { type Request, type Response } from 'express';
-import { calculateBusinessHours } from '../services/businessHoursService';
 
 /**
  * @swagger
@@ -10,14 +8,16 @@ import { calculateBusinessHours } from '../services/businessHoursService';
  *     parameters:
  *       - in: query
  *         name: dayToAdd
- *         required: true
+ *         required: false
+ *         optional: true
  *         schema:
  *           type: integer
  *           minimum: 0
  *         description: Number of business days to add
  *       - in: query
  *         name: hourToAdd
- *         required: true
+ *         required: false
+ *         optional: true
  *         schema:
  *           type: integer
  *           minimum: 0
@@ -47,39 +47,45 @@ import { calculateBusinessHours } from '../services/businessHoursService';
  *         description: Server error while calculating business hours
  */
 
-export const businessHoursController = async (req: Request, res: Response): Promise<Response> => {
-  const { dayToAdd, hourToAdd, startDate } = req.query;
-  
-  if (!dayToAdd || !hourToAdd) {
-    return res.status(400).json({ error: 'Missing parameters' });
-  }
-  
+import { calculateBusinessHours } from "../services/businessHoursService.js";
+import { BusinessHoursResponse, CustomRequest } from "../types/index.js";
+
+export const businessHoursController = async (
+  req: CustomRequest
+): Promise<BusinessHoursResponse> => {
   try {
-    const days = Number(dayToAdd);
-    const hours = Number(hourToAdd);
-    
-    if (isNaN(days) || isNaN(hours)) {
-      return res.status(400).json({ error: 'Invalid parameters' });
+    const { dayToAdd, hourToAdd, startDate } = req.query;
+
+    // Validate input parameters
+    const days = dayToAdd ? parseInt(dayToAdd, 10) : 0;
+    const hours = hourToAdd ? parseInt(hourToAdd, 10) : 0;
+    const start = startDate ? new Date(startDate) : new Date();
+
+    if (isNaN(days) || isNaN(hours) || isNaN(start.getTime())) {
+      return {
+        statusCode: 400,
+        body: { error: 'Invalid input parameters' } as const
+      };
     }
-    
-    let startDateObj: Date | undefined;
-    if (startDate) {
-      if (Array.isArray(startDate) || typeof startDate !== 'string') {
-        return res.status(400).json({ error: 'startDate must be a string' });
-      }
-      startDateObj = new Date(startDate);
-      if (isNaN(startDateObj.getTime())) {
-        return res.status(400).json({ error: 'Invalid startDate format' });
-      }
+
+    if (days < 0 || hours < 0) {
+      return {
+        statusCode: 400,
+        body: { error: 'Days and hours must be non-negative' } as const
+      };
     }
-    
-    const result = await calculateBusinessHours(days, hours, startDateObj);
-    console.log(result);
-    return res.json(result);
+
+    const result = calculateBusinessHours(days, hours, start ? new Date(start) : undefined);
+
+    return {
+      statusCode: 200,
+      body: { result: (await result).toISOString() } as const
+    };
   } catch (error) {
-    // Log the error for debugging purposes
-    // eslint-disable-next-line no-console
-    console.error('Error calculating business hours:', error);
-    return res.status(500).json({ error: 'Error calculating business hours' });
+    console.error('Error in businessHoursController:', error);
+    return {
+      statusCode: 500,
+      body: { error: 'Internal server error' } as const
+    };
   }
 };
