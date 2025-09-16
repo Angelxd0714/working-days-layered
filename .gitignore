@@ -7,7 +7,7 @@ swagger/
 .env.development.local
 .env.test.local
 .env.production.local
-
+.serverless/
 # Build output
 dist/
 build/
