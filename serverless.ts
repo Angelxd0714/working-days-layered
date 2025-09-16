@@ -2,7 +2,9 @@
 
 /** @type {import('@serverless/types').AWS} */
 const serverlessConfiguration = {
-  service: 'working-days-api',
+  org: 'angelkashed12',
+  app: 'working-days-layered',
+  service: 'working-days-layered',
   frameworkVersion: '3',
   plugins: [
     'serverless-auto-swagger',
@@ -13,7 +15,7 @@ const serverlessConfiguration = {
     name: 'aws',
     runtime: 'nodejs20.x',
     stage: '${opt:stage, "dev"}',
-    region: 'us-east-1',
+    region: 'us-west-2',
     memorySize: 256,
     timeout: 30,
     httpApi: {
