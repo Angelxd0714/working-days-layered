@@ -7,7 +7,7 @@ import {
   format,
 } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
-import { getHolidays } from "../utils/holidays.js";
+import { getHolidays } from "../utils/holidays";
 
 const TIME_ZONE = "America/Bogota";
 const BUSINESS_HOURS = {

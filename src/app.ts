@@ -1,34 +1,49 @@
-import express, { type Express, type Request, type Response, type NextFunction } from 'express';
-import { CustomRequest } from './types/index.js';
-
+import express, { Express, Request, Response, NextFunction } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import { specs } from './config/swagger.js';
 import { businessHoursController } from './controllers/businessHoursController.js';
 import serverless from 'serverless-http';
 
-export const app: Express = express();
-const PORT = process.env.PORT || 3000;
+const app: Express = express();
 
-// Middleware
 app.use(express.json());
 
-// Routes
-app.get('/business-hours', async (req: CustomRequest, res: Response, next: NextFunction) => {
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.get('/business-hours', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await businessHoursController(req);
-    res.status(result.statusCode).json(result.body);
+    res.status(result.statusCode).json(result.result);
   } catch (error) {
     next(error);
   }
 });
 
-// Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// Error handling middleware
+app.use((req: Request, res: Response) => {
+  res.status(404).json({ error: 'Not Found' });
+});
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
-  res.status(500).json({ error: 'Internal Server Error' });
+  res.status(500).json({ 
+    error: 'Internal Server Error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-export const handler = serverless(app);
+export const handler = serverless(app, {
+  binary: ['image/*', 'application/json'],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`API Docs: http://localhost:${PORT}/api-docs`);
+  });
+}
+
+export default app;

@@ -47,12 +47,11 @@
  *         description: Server error while calculating business hours
  */
 
-import { calculateBusinessHours } from "../services/businessHoursService.js";
-import { BusinessHoursResponse, CustomRequest } from "../types/index.js";
+import { calculateBusinessHours } from "../services/businessHoursService";
 
 export const businessHoursController = async (
-  req: CustomRequest
-): Promise<BusinessHoursResponse> => {
+  req: { query: { dayToAdd?: string; hourToAdd?: string; startDate?: string } }
+): Promise<{ statusCode: number; result: string }> => {
   try {
     const { dayToAdd, hourToAdd, startDate } = req.query;
 
@@ -64,14 +63,14 @@ export const businessHoursController = async (
     if (isNaN(days) || isNaN(hours) || isNaN(start.getTime())) {
       return {
         statusCode: 400,
-        body: { error: 'Invalid input parameters' } as const
+        result: 'Invalid input parameters'
       };
     }
 
     if (days < 0 || hours < 0) {
       return {
         statusCode: 400,
-        body: { error: 'Days and hours must be non-negative' } as const
+        result: 'Days and hours must be non-negative'
       };
     }
 
@@ -79,13 +78,13 @@ export const businessHoursController = async (
 
     return {
       statusCode: 200,
-      body: { result: (await result).toISOString() } as const
+      result: (await result).toISOString()
     };
   } catch (error) {
     console.error('Error in businessHoursController:', error);
     return {
       statusCode: 500,
-      body: { error: 'Internal server error' } as const
+      result: 'Internal server error'
     };
   }
 };
