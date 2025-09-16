@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-
+swagger/
 # Environment variables
 .env
 .env.local

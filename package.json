@@ -6,7 +6,7 @@
   "exports": "./dist/app.js",
   "scripts": {
     "build": "tsc && tsc-alias",
-    "dev": "serverless offline",
+    "dev": "serverless offline start",
     "deploy": "npm run build && serverless deploy"
   },
   "dependencies": {
@@ -33,10 +33,12 @@
     "esbuild": "^0.25.9",
     "eslint": "^9.35.0",
     "serverless": "^3.40.0",
+    "serverless-auto-swagger": "^3.1.0",
     "serverless-aws-documentation": "^1.1.0",
     "serverless-esbuild": "^1.55.1",
     "serverless-offline": "^13.3.3",
     "serverless-plugin-typescript": "^2.1.5",
+    "serverless-s3-sync": "^3.4.0",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",

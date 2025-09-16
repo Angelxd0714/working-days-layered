@@ -1,6 +1,6 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { specs } from './config/swagger.js';
+import { specs } from './config/swagger';
 import { businessHoursController } from './controllers/businessHoursController.js';
 import serverless from 'serverless-http';
 
@@ -15,7 +15,15 @@ app.get('/health', (req: Request, res: Response) => {
 app.get('/business-hours', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await businessHoursController(req);
-    res.status(result.statusCode).json(result.result);
+    if ('error' in result) {
+      // It's an ErrorResponse
+      const { statusCode, error, details } = result;
+      res.status(statusCode).json({ error, details });
+    } else {
+      // It's a BusinessHoursResponse
+      const { statusCode, result: responseResult } = result;
+      res.status(statusCode).json(responseResult);
+    }
   } catch (error) {
     next(error);
   }

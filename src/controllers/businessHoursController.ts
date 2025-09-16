@@ -1,90 +1,66 @@
 
-/**
- * @swagger
- * /business-hours:
- *   get:
- *     summary: Calculate business hours by adding days and hours to a start date
- *     tags: [Business Hours]
- *     parameters:
- *       - in: query
- *         name: dayToAdd
- *         required: false
- *         optional: true
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: Number of business days to add
- *       - in: query
- *         name: hourToAdd
- *         required: false
- *         optional: true
- *         schema:
- *           type: integer
- *           minimum: 0
- *         description: Number of business hours to add
- *       - in: query
- *         name: startDate
- *         required: false
- *         schema:
- *           type: string
- *           format: date-time
- *         description: Start date (ISO 8601 format). If not provided, current date will be used.
- *     responses:
- *       200:
- *         description: The calculated date after adding business hours
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 result:
- *                   type: string
- *                   format: date-time
- *                   description: The calculated date in ISO 8601 format
- *       400:
- *         description: Invalid input parameters
- *       500:
- *         description: Server error while calculating business hours
- */
-
 import { calculateBusinessHours } from "../services/businessHoursService";
+import { BusinessHoursResponse, ErrorResponse } from "../types/api-types";
+
+const createErrorResponse = (
+  statusCode: number,
+  message: string,
+  details?: Array<{ message: string; field?: string }>
+): ErrorResponse => ({
+  statusCode,
+  error: message,
+  ...(details && { details })
+});
 
 export const businessHoursController = async (
   req: { query: { dayToAdd?: string; hourToAdd?: string; startDate?: string } }
-): Promise<{ statusCode: number; result: string }> => {
+): Promise<BusinessHoursResponse | ErrorResponse> => {
   try {
     const { dayToAdd, hourToAdd, startDate } = req.query;
 
-    // Validate input parameters
     const days = dayToAdd ? parseInt(dayToAdd, 10) : 0;
     const hours = hourToAdd ? parseInt(hourToAdd, 10) : 0;
     const start = startDate ? new Date(startDate) : new Date();
 
-    if (isNaN(days) || isNaN(hours) || isNaN(start.getTime())) {
-      return {
-        statusCode: 400,
-        result: 'Invalid input parameters'
-      };
+    const errors: Array<{ message: string; field?: string }> = [];
+    
+    if (dayToAdd && isNaN(days)) {
+      errors.push({ message: 'dayToAdd must be a valid number', field: 'dayToAdd' });
+    }
+    
+    if (hourToAdd && isNaN(hours)) {
+      errors.push({ message: 'hourToAdd must be a valid number', field: 'hourToAdd' });
+    }
+    
+    if (isNaN(start.getTime())) {
+      errors.push({ message: 'startDate must be a valid date', field: 'startDate' });
+    }
+    
+    if (days < 0) {
+      errors.push({ message: 'dayToAdd must be a non-negative number', field: 'dayToAdd' });
+    }
+    
+    if (hours < 0) {
+      errors.push({ message: 'hourToAdd must be a non-negative number', field: 'hourToAdd' });
+    }
+    
+    if (errors.length > 0) {
+      return createErrorResponse(400, 'Invalid input parameters', errors);
     }
 
-    if (days < 0 || hours < 0) {
+    try {
+      const result = await calculateBusinessHours(days, hours, start);
+      
       return {
-        statusCode: 400,
-        result: 'Days and hours must be non-negative'
+        statusCode: 200,
+        result: result.toISOString()
       };
+    } catch (error) {
+      console.error('Error calculating business hours:', error);
+      return createErrorResponse(500, 'Error calculating business hours');
     }
-
-    const result = calculateBusinessHours(days, hours, start ? new Date(start) : undefined);
-
-    return {
-      statusCode: 200,
-      result: (await result).toISOString()
-    };
   } catch (error) {
-    console.error('Error in businessHoursController:', error);
-    return {
-      statusCode: 500,
-      result: 'Internal server error'
-    };
+    console.error('Unexpected error in businessHoursController:', error);
+    return createErrorResponse(500, 'Internal server error');
   }
 };

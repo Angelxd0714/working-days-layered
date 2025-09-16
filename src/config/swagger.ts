@@ -1,39 +1,17 @@
-import swaggerJsdoc from 'swagger-jsdoc';
-import type { Options } from 'swagger-jsdoc';
-
-/**
- * Swagger configuration options
- */
-const swaggerOptions: Options = {
+export const specs = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Business Hours API',
+      title: 'Working Days API',
       version: '1.0.0',
-      description: 'API para calcular horas y días hábiles',
-      contact: {
-        name: 'API Support',
-        email: 'angelxd0714@gmail.com',
-      },
-      license: {
-        name: 'MIT',
-        url: 'https://opensource.org/licenses/MIT',
-      },
+      description: 'API for calculating working days and business hours',
     },
     servers: [
       {
-        url: 'http://localhost:3000/dev',
-        description: 'Development server',
-      }
+        url: 'http://localhost:3000',
+        description: 'Local server',
+      },
     ],
   },
-  apis: [
-    './src/controllers/*.ts',
-    './src/types/*.ts',
-  ],
+  apis: ['./src/**/*.ts'],
 };
-
-// Initialize swagger-jsdoc
-const specs = swaggerJsdoc(swaggerOptions);
-
-export { specs };
