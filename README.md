@@ -43,6 +43,20 @@ Esto iniciará el servidor en `http://localhost:3000` con la documentación de l
 - Documentación Swagger UI: `http://localhost:3000/api-docs`
 - Esquema OpenAPI: `http://localhost:3000/api-docs.json`
 
+## 📚 Visualizar Documentación con Swagger Editor
+
+Puedes visualizar y probar la documentación de la API utilizando el editor de Swagger Online:
+
+1. Abre tu navegador y ve a [Swagger Editor](https://editor.swagger.io/)
+2. Haz clic en "File" > "Import File" y selecciona el archivo `openapi.yaml`
+   - O simplemente arrastra y suelta el archivo `openapi.yaml` en la ventana del editor
+
+El editor te permitirá:
+- Ver una vista previa interactiva de la documentación
+- Probar los endpoints directamente desde el navegador
+- Validar la sintaxis de tu archivo OpenAPI
+- Exportar la documentación en diferentes formatos
+
 ## 🌐 Endpoints
 
 ### GET /business-hours
