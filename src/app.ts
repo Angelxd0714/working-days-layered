@@ -1,6 +1,4 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
-import swaggerUi from 'swagger-ui-express';
-import { specs } from './config/swagger';
 import { businessHoursController } from './controllers/businessHoursController.js';
 import serverless from 'serverless-http';
 
@@ -29,7 +27,6 @@ app.get('/business-hours', async (req: Request, res: Response, next: NextFunctio
   }
 });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 app.use((req: Request, res: Response) => {
   res.status(404).json({ error: 'Not Found' });

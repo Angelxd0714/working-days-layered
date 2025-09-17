@@ -7,7 +7,7 @@ const serverlessConfiguration = {
   service: 'working-days-layered',
   frameworkVersion: '3',
   plugins: [
-    'serverless-auto-swagger',
+    'serverless-openapi-documentation',
     'serverless-esbuild',
     'serverless-offline'
   ],
@@ -16,8 +16,17 @@ const serverlessConfiguration = {
     runtime: 'nodejs20.x',
     stage: '${opt:stage, "dev"}',
     region: 'us-west-2',
+    logs: {
+      restApi: {
+        role: 'arn:aws:iam::604100153030:role/serverlessApiGatewayCloudWatchRole',
+        roleManagedExternally: true,
+      },
+    },
     memorySize: 256,
     timeout: 30,
+    deploymentBucket: {
+      name: 'working-days-layered-deployment-${self:provider.region}-${self:provider.stage}'
+    },
     httpApi: {
       cors: true,
       disableDefaultEndpoint: true
@@ -66,39 +75,71 @@ const serverlessConfiguration = {
             path: '/business-hours',
             method: 'GET',
             cors: true,
-            summary: 'Obtiene horarios comerciales',
-            description: 'Retorna los horarios comerciales basados en parámetros de consulta',
-            swaggerTags: ['Business Hours'],
-            queryStringParameters: {
-              dayToAdd: {
-                required: true,
-                type: 'string',
-                description: 'Día a agregar para el cálculo'
-              },
-              hourToAdd: {
-                required: true,
-                type: 'string',
-                description: 'Hora a agregar para el cálculo'
-              },
-              startDate: {
-                required: false,
-                type: 'string',
-                description: 'Fecha de inicio para el cálculo'
-              }
-            },
-            responseData: {
-              200: {
-                description: 'Horarios comerciales obtenidos exitosamente',
-                bodyType: 'BusinessHoursResponse'
-              },
-              400: {
-                description: 'Parámetros de consulta inválidos',
-                bodyType: 'ErrorResponse'
-              },
-              500: {
-                description: 'Error interno del servidor',
-                bodyType: 'ErrorResponse'
-              }
+            documentation: {
+              summary: 'Obtiene horarios comerciales',
+              description: 'Retorna los horarios comerciales basados en parámetros de consulta',
+              tags: ['Business Hours'],
+              queryParams: [
+                {
+                  name: 'dayToAdd',
+                  description: 'Días hábiles a agregar',
+                  required: true,
+                  schema: { 
+                    type: 'integer',
+                    minimum: 0,
+                    description: 'Número de días hábiles a agregar'
+                  }
+                },
+                {
+                  name: 'hourToAdd',
+                  description: 'Horas hábiles a agregar',
+                  required: true,
+                  schema: { 
+                    type: 'integer',
+                    minimum: 0,
+                    description: 'Número de horas hábiles a agregar'
+                  }
+                },
+                {
+                  name: 'startDate',
+                  description: 'Fecha de inicio en formato ISO 8601 (opcional, por defecto: fecha actual)',
+                  required: false,
+                  schema: { 
+                    type: 'string',
+                    format: 'date-time',
+                    description: 'Fecha de inicio en formato ISO 8601 (opcional, por defecto: fecha actual)'
+                  }
+                }
+              ],
+              methodResponses: [
+                {
+                  statusCode: '200',
+                  responseBody: {
+                    description: 'Horarios comerciales obtenidos exitosamente'
+                  },
+                  responseModels: {
+                    'application/json': 'BusinessHoursResponse'
+                  }
+                },
+                {
+                  statusCode: '400',
+                  responseBody: {
+                    description: 'Parámetros de entrada inválidos'
+                  },
+                  responseModels: {
+                    'application/json': 'ErrorResponse'
+                  }
+                },
+                {
+                  statusCode: '500',
+                  responseModels: {
+                    'application/json': 'ErrorResponse'
+                  },
+                  responseBody: {
+                    description: 'Error interno del servidor'
+                  }
+                }
+              ]
             },
             request: {
               parameters: {
@@ -115,6 +156,86 @@ const serverlessConfiguration = {
     },
   },
   custom: {
+    documentation: {
+      version: '1.0.0',
+      title: 'Working Days API',
+      description: 'API para el cálculo de días y horas hábiles',
+      models: [
+        {
+          name: 'BusinessHoursResponse',
+          description: 'Respuesta con los horarios comerciales calculados',
+          contentType: 'application/json',
+          schema: {
+            type: 'object',
+            properties: {
+              result: { 
+                type: 'string',
+                description: 'Resultado del cálculo'
+              },
+              startDate: { 
+                type: 'string', 
+                format: 'date-time',
+                description: 'Fecha de inicio del período calculado'
+              },
+              endDate: { 
+                type: 'string', 
+                format: 'date-time',
+                description: 'Fecha final del período calculado'
+              },
+              totalBusinessHours: { 
+                type: 'number',
+                description: 'Total de horas hábiles calculadas'
+              },
+              totalBusinessDays: { 
+                type: 'number',
+                description: 'Total de días hábiles calculados'
+              },
+              businessHours: { 
+                type: 'number',
+                description: 'Horas hábiles'
+              },
+              days: { 
+                type: 'number',
+                description: 'Días'
+              },
+              hours: { 
+                type: 'number',
+                description: 'Horas'
+              },
+              minutes: { 
+                type: 'number',
+                description: 'Minutos'
+              }
+            },
+            required: [
+              'startDate',
+              'endDate',
+              'totalBusinessHours',
+              'totalBusinessDays',
+              'businessHours',
+              'days',
+              'hours',
+              'minutes'
+            ]
+          }
+        },
+        {
+          name: 'ErrorResponse',
+          description: 'Error response',
+          contentType: 'application/json',
+          schema: {
+            type: 'object',
+            properties: {
+              statusCode: { type: 'number' },
+              error: { type: 'string' },
+              message: { type: 'string' },
+              code: { type: 'string' }
+            },
+            required: ['statusCode', 'error', 'message']
+          }
+        }
+      ]
+    },
     serverlessOffline: {
       noPrependStageInUrl: true,
       httpPort: 3000,
@@ -123,7 +244,7 @@ const serverlessConfiguration = {
     },
     esbuild: {
       bundle: true,
-      minify: false,
+      minify: true,
       sourcemap: true,
       exclude: ['aws-sdk'],
       target: 'node20',
@@ -134,22 +255,7 @@ const serverlessConfiguration = {
         pattern: ['src/**/*.ts'],
         ignore: ['dist', '.esbuild', 'node_modules'],
       },
-      
-    },
-    autoswagger: {
-      title: 'Working Days API',
-      apiType: 'http',
-      generateSwaggerOnDeploy: true,
-      swaggerPath: 'swagger',
-      typefiles: ['./src/types/api-types.d.ts'],
-      useStage: false,
-      basePath: '/',
-      host: 'localhost:3000/dev',
-      schemes: ['http'],
-      excludeStages: ['production'],
-      useRedirectUI: true
     }
-    
   },
 };
 

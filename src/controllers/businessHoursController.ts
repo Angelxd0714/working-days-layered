@@ -12,36 +12,48 @@ const createErrorResponse = (
   ...(details && { details })
 });
 
+interface QueryParams {
+  dayToAdd?: string;
+  hourToAdd?: string;
+  startDate?: string;
+}
+
 export const businessHoursController = async (
-  req: { query: { dayToAdd?: string; hourToAdd?: string; startDate?: string } }
+  req: { query: QueryParams }
 ): Promise<BusinessHoursResponse | ErrorResponse> => {
   try {
     const { dayToAdd, hourToAdd, startDate } = req.query;
 
-    const days = dayToAdd ? parseInt(dayToAdd, 10) : 0;
-    const hours = hourToAdd ? parseInt(hourToAdd, 10) : 0;
+    // Validate required parameters
+    if (!dayToAdd || !hourToAdd) {
+      const missingParams = [];
+      if (!dayToAdd) missingParams.push('dayToAdd');
+      if (!hourToAdd) missingParams.push('hourToAdd');
+      
+      return createErrorResponse(400, `Missing required parameters: ${missingParams.join(', ')}`);
+    }
+
+    // Parse and validate numbers
+    const days = parseInt(dayToAdd, 10);
+    const hours = parseInt(hourToAdd, 10);
     const start = startDate ? new Date(startDate) : new Date();
 
     const errors: Array<{ message: string; field?: string }> = [];
     
-    if (dayToAdd && isNaN(days)) {
+    if (isNaN(days)) {
       errors.push({ message: 'dayToAdd must be a valid number', field: 'dayToAdd' });
+    } else if (days < 0) {
+      errors.push({ message: 'dayToAdd must be a non-negative number', field: 'dayToAdd' });
     }
     
-    if (hourToAdd && isNaN(hours)) {
+    if (isNaN(hours)) {
       errors.push({ message: 'hourToAdd must be a valid number', field: 'hourToAdd' });
+    } else if (hours < 0) {
+      errors.push({ message: 'hourToAdd must be a non-negative number', field: 'hourToAdd' });
     }
     
     if (isNaN(start.getTime())) {
       errors.push({ message: 'startDate must be a valid date', field: 'startDate' });
-    }
-    
-    if (days < 0) {
-      errors.push({ message: 'dayToAdd must be a non-negative number', field: 'dayToAdd' });
-    }
-    
-    if (hours < 0) {
-      errors.push({ message: 'hourToAdd must be a non-negative number', field: 'hourToAdd' });
     }
     
     if (errors.length > 0) {
