@@ -54,17 +54,9 @@ const serverlessConfiguration = {
   },
   package: {
     patterns: [
-      '!node_modules/.git/**',
-      '!node_modules/.bin/**',
-      '!node_modules/aws-sdk/**',
-      '!src/**',
-      '!tsconfig.json',
-      '!.eslintrc.cjs',
-      '!.gitignore',
-      '!**/*',
       'dist/**',
-      'node_modules/**',
-    ],
+      '!**/*'
+    ]
   },
   functions: {
     businessHours: {
