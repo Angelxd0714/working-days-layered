@@ -68,38 +68,39 @@ const serverlessConfiguration = {
             method: 'GET',
             cors: true,
             documentation: {
-              summary: 'Obtiene horarios comerciales',
-              description: 'Retorna los horarios comerciales basados en parámetros de consulta',
+              summary: 'Calcula fechas hábiles',
+              description: 'Calcula fechas hábiles considerando días festivos colombianos y horarios laborales',
               tags: ['Business Hours'],
               queryParams: [
                 {
-                  name: 'dayToAdd',
-                  description: 'Días hábiles a agregar',
-                  required: true,
+                  name: 'days',
+                  description: 'Número de días hábiles a sumar (opcional, entero positivo)',
+                  required: false,
                   schema: { 
                     type: 'integer',
                     minimum: 0,
-                    description: 'Número de días hábiles a agregar'
+                    description: 'Número de días hábiles a sumar'
                   }
                 },
                 {
-                  name: 'hourToAdd',
-                  description: 'Horas hábiles a agregar',
-                  required: true,
+                  name: 'hours',
+                  description: 'Número de horas hábiles a sumar (opcional, entero positivo)',
+                  required: false,
                   schema: { 
                     type: 'integer',
                     minimum: 0,
-                    description: 'Número de horas hábiles a agregar'
+                    description: 'Número de horas hábiles a sumar'
                   }
                 },
                 {
-                  name: 'startDate',
-                  description: 'Fecha de inicio en formato ISO 8601 (opcional, por defecto: fecha actual)',
+                  name: 'date',
+                  description: 'Fecha/hora inicial en UTC (ISO 8601) con sufijo Z (opcional)',
                   required: false,
                   schema: { 
                     type: 'string',
                     format: 'date-time',
-                    description: 'Fecha de inicio en formato ISO 8601 (opcional, por defecto: fecha actual)'
+                    pattern: '^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z$',
+                    description: 'Fecha/hora inicial en UTC ISO 8601 con sufijo Z'
                   }
                 }
               ],
@@ -136,9 +137,9 @@ const serverlessConfiguration = {
             request: {
               parameters: {
                 querystrings: {
-                  dayToAdd: true,
-                  hourToAdd: true,
-                  startDate: false
+                  days: true,
+                  hours: true,
+                  date: false
                 }
               }
             }
@@ -155,75 +156,40 @@ const serverlessConfiguration = {
       models: [
         {
           name: 'BusinessHoursResponse',
-          description: 'Respuesta con los horarios comerciales calculados',
+          description: 'Respuesta exitosa con la fecha calculada',
           contentType: 'application/json',
           schema: {
             type: 'object',
             properties: {
-              result: { 
+              date: { 
                 type: 'string',
-                description: 'Resultado del cálculo'
-              },
-              startDate: { 
-                type: 'string', 
                 format: 'date-time',
-                description: 'Fecha de inicio del período calculado'
-              },
-              endDate: { 
-                type: 'string', 
-                format: 'date-time',
-                description: 'Fecha final del período calculado'
-              },
-              totalBusinessHours: { 
-                type: 'number',
-                description: 'Total de horas hábiles calculadas'
-              },
-              totalBusinessDays: { 
-                type: 'number',
-                description: 'Total de días hábiles calculados'
-              },
-              businessHours: { 
-                type: 'number',
-                description: 'Horas hábiles'
-              },
-              days: { 
-                type: 'number',
-                description: 'Días'
-              },
-              hours: { 
-                type: 'number',
-                description: 'Horas'
-              },
-              minutes: { 
-                type: 'number',
-                description: 'Minutos'
+                description: 'Fecha y hora calculada en UTC ISO 8601',
+                example: '2025-08-01T14:00:00.000Z'
               }
             },
-            required: [
-              'startDate',
-              'endDate',
-              'totalBusinessHours',
-              'totalBusinessDays',
-              'businessHours',
-              'days',
-              'hours',
-              'minutes'
-            ]
+            required: ['date']
           }
         },
         {
           name: 'ErrorResponse',
-          description: 'Error response',
+          description: 'Respuesta de error',
           contentType: 'application/json',
           schema: {
             type: 'object',
             properties: {
-              statusCode: { type: 'number' },
-              error: { type: 'string' },
-              message: { type: 'string' },
-              code: { type: 'string' }
+              error: { 
+                type: 'string',
+                description: 'Tipo de error',
+                example: 'InvalidParameters'
+              },
+              message: { 
+                type: 'string',
+                description: 'Descripción del error',
+                example: 'At least one of \'days\' or \'hours\' parameters is required'
+              }
             },
-            required: ['statusCode', 'error', 'message']
+            required: ['error', 'message']
           }
         }
       ]
