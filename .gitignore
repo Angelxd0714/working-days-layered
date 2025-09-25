@@ -11,7 +11,7 @@ swagger/
 # Build output
 dist/
 build/
-
+.kiro/
 # Logs
 logs
 *.log

@@ -1,84 +1,56 @@
-openapi: 3.1.0
-components:
-  schemas:
-    BusinessHoursResponse:
-      type: object
-      properties:
-        result:
-          type: string
-          description: Resultado del cálculo
-        startDate:
-          type: string
-          format: date-time
-          description: Fecha de inicio del período calculado
-        endDate:
-          type: string
-          format: date-time
-          description: Fecha final del período calculado
-        totalBusinessHours:
-          type: number
-          description: Total de horas hábiles calculadas
-        totalBusinessDays:
-          type: number
-          description: Total de días hábiles calculados
-        businessHours:
-          type: number
-          description: Horas hábiles
-        days:
-          type: number
-          description: Días
-        hours:
-          type: number
-          description: Horas
-        minutes:
-          type: number
-          description: Minutos
-      required:
-        - startDate
-        - endDate
-        - totalBusinessHours
-        - totalBusinessDays
-        - businessHours
-        - days
-        - hours
-        - minutes
-    ErrorResponse:
-      type: object
-      properties:
-        statusCode:
-          type: number
-        error:
-          type: string
-        message:
-          type: string
-        code:
-          type: string
-      required:
-        - statusCode
-        - error
-        - message
-  securitySchemes: {}
+openapi: 3.0.3
 info:
   title: Working Days API
-  description: API para el cálculo de días y horas hábiles
+  description: API para el cálculo de días y horas hábiles en Colombia
   version: 1.0.0
+servers:
+  - url:  https://g6gkebr31f.execute-api.us-west-2.amazonaws.com/dev/business-hours
+    description: Production server
+  - url: http://localhost:3000/v1
+    description: Development server
 paths:
-  //business-hours:
+  /business-hours:
     get:
       operationId: businessHours
-      summary: Obtiene horarios comerciales
-      description: Retorna los horarios comerciales basados en parámetros de consulta
+      summary: Calcula fechas hábiles
+      description: Calcula fechas hábiles considerando días festivos colombianos y horarios laborales
       tags:
         - Business Hours
+      parameters:
+        - name: days
+          in: query
+          description: Número de días hábiles a sumar (opcional, entero positivo)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            example: 1
+        - name: hours
+          in: query
+          description: Número de horas hábiles a sumar (opcional, entero positivo)
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            example: 8
+        - name: date
+          in: query
+          description: Fecha/hora inicial en UTC (ISO 8601) con sufijo Z (opcional)
+          required: false
+          schema:
+            type: string
+            format: date-time
+            pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$'
+            example: "2025-04-10T15:00:00.000Z"
       responses:
         '200':
-          description: Horarios comerciales obtenidos exitosamente
+          description: Cálculo exitoso
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BusinessHoursResponse'
         '400':
-          description: Parámetros de entrada inválidos
+          description: Parámetros inválidos
           content:
             application/json:
               schema:
@@ -89,3 +61,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    BusinessHoursResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+          description: Fecha y hora calculada en UTC ISO 8601
+          example: "2025-08-01T14:00:00.000Z"
+      required:
+        - date
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Tipo de error
+          example: "InvalidParameters"
+        message:
+          type: string
+          description: Descripción del error
+          example: "At least one of 'days' or 'hours' parameters is required"
+      required:
+        - error
+        - message

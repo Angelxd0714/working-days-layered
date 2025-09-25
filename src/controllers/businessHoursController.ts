@@ -1,78 +1,103 @@
 
 import { calculateBusinessHours } from "../services/businessHoursService";
-import { BusinessHoursResponse, ErrorResponse } from "../types/api-types";
+import { BusinessHoursResponse, ErrorResponse, BusinessHoursRequest } from "../types/api-types";
 
 const createErrorResponse = (
-  statusCode: number,
-  message: string,
-  details?: Array<{ message: string; field?: string }>
+  error: string,
+  message: string
 ): ErrorResponse => ({
-  statusCode,
-  error: message,
-  ...(details && { details })
+  error,
+  message
 });
 
-interface QueryParams {
-  dayToAdd?: string;
-  hourToAdd?: string;
-  startDate?: string;
-}
-
 export const businessHoursController = async (
-  req: { query: QueryParams }
+  req: { query: BusinessHoursRequest }
 ): Promise<BusinessHoursResponse | ErrorResponse> => {
   try {
-    const { dayToAdd, hourToAdd, startDate } = req.query;
+    const { days, hours, date } = req.query;
 
-    // Validate required parameters
-    if (!dayToAdd || !hourToAdd) {
-      const missingParams = [];
-      if (!dayToAdd) missingParams.push('dayToAdd');
-      if (!hourToAdd) missingParams.push('hourToAdd');
-      
-      return createErrorResponse(400, `Missing required parameters: ${missingParams.join(', ')}`);
+    let daysValue = 0;
+    let hasValidDays = false;
+    if (days !== undefined) {
+      if (!/^\d+$/.test(days.trim())) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'days' must be a positive integer"
+        );
+      }
+      daysValue = parseInt(days, 10);
+      if (isNaN(daysValue) || daysValue < 0) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'days' must be a positive integer"
+        );
+      }
+      hasValidDays = true;
     }
 
-    // Parse and validate numbers
-    const days = parseInt(dayToAdd, 10);
-    const hours = parseInt(hourToAdd, 10);
-    const start = startDate ? new Date(startDate) : new Date();
+    let hoursValue = 0;
+    let hasValidHours = false;
+    if (hours !== undefined) {
+      if (!/^\d+$/.test(hours.trim())) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'hours' must be a positive integer"
+        );
+      }
+      hoursValue = parseInt(hours, 10);
+      if (isNaN(hoursValue) || hoursValue < 0) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'hours' must be a positive integer"
+        );
+      }
+      hasValidHours = true;
+    }
 
-    const errors: Array<{ message: string; field?: string }> = [];
-    
-    if (isNaN(days)) {
-      errors.push({ message: 'dayToAdd must be a valid number', field: 'dayToAdd' });
-    } else if (days < 0) {
-      errors.push({ message: 'dayToAdd must be a non-negative number', field: 'dayToAdd' });
+    if (!hasValidDays && !hasValidHours) {
+      return createErrorResponse(
+        "InvalidParameters", 
+        "At least one of 'days' or 'hours' parameters is required"
+      );
     }
-    
-    if (isNaN(hours)) {
-      errors.push({ message: 'hourToAdd must be a valid number', field: 'hourToAdd' });
-    } else if (hours < 0) {
-      errors.push({ message: 'hourToAdd must be a non-negative number', field: 'hourToAdd' });
-    }
-    
-    if (isNaN(start.getTime())) {
-      errors.push({ message: 'startDate must be a valid date', field: 'startDate' });
-    }
-    
-    if (errors.length > 0) {
-      return createErrorResponse(400, 'Invalid input parameters', errors);
+
+    let startDate: Date;
+    if (date !== undefined) {
+      if (!date.endsWith('Z') || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(date)) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'date' must be a valid UTC ISO 8601 format with Z suffix"
+        );
+      }
+      startDate = new Date(date);
+      if (isNaN(startDate.getTime())) {
+        return createErrorResponse(
+          "InvalidParameters",
+          "Parameter 'date' must be a valid UTC ISO 8601 format with Z suffix"
+        );
+      }
+    } else {
+      startDate = new Date();
     }
 
     try {
-      const result = await calculateBusinessHours(days, hours, start);
+      const result = await calculateBusinessHours(daysValue, hoursValue, startDate);
       
       return {
-        statusCode: 200,
-        result: result.toISOString()
+        date: result.toISOString()
       };
     } catch (error) {
       console.error('Error calculating business hours:', error);
-      return createErrorResponse(500, 'Error calculating business hours');
+      return createErrorResponse(
+        "InternalServerError",
+        "Error calculating business hours"
+      );
     }
   } catch (error) {
     console.error('Unexpected error in businessHoursController:', error);
-    return createErrorResponse(500, 'Internal server error');
+    return createErrorResponse(
+      "InternalServerError",
+      "Internal server error"
+    );
   }
 };

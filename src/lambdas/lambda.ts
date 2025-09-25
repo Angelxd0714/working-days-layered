@@ -10,43 +10,36 @@ const CORS_HEADERS = {
 
 export const businessHoursHandler: APIGatewayProxyHandler = async (event) => {
   try {
-    const response = await businessHoursController({ 
+    const response = await businessHoursController({
       query: event.queryStringParameters || {}
     });
 
-    // If the response is a BusinessHoursResponse, format it properly
-    if ('result' in response) {
+    if ('date' in response) {
       const successResponse = response as BusinessHoursResponse;
       return {
-        statusCode: successResponse.statusCode,
+        statusCode: 200,
         headers: CORS_HEADERS,
-        body: JSON.stringify({
-          statusCode: successResponse.statusCode,
-          result: successResponse.result
-        }),
+        body: JSON.stringify(successResponse),
       };
     }
-    
-    // If it's an error response, return it as is
+
+    const errorResponse = response as ErrorResponse;
+    const statusCode = errorResponse.error === 'InvalidParameters' ? 400 : 500;
+
     return {
-      statusCode: response.statusCode,
+      statusCode,
       headers: CORS_HEADERS,
-      body: JSON.stringify(response),
+      body: JSON.stringify(errorResponse),
     };
-    
+
   } catch (error) {
     console.error('Unexpected error in businessHoursHandler:', error);
     return {
       statusCode: 500,
       headers: CORS_HEADERS,
       body: JSON.stringify({
-        statusCode: 500,
-        error: 'Internal server error',
-        details: [
-          {
-            message: error instanceof Error ? error.message : 'Unknown error',
-          },
-        ],
+        error: 'InternalServerError',
+        message: error instanceof Error ? error.message : 'Internal server error'
       }),
     };
   }

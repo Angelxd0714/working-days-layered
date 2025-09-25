@@ -1,5 +1,5 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
-import { businessHoursController } from './controllers/businessHoursController.js';
+import { businessHoursController } from './controllers/businessHoursController';
 import serverless from 'serverless-http';
 
 const app: Express = express();
@@ -14,28 +14,26 @@ app.get('/business-hours', async (req: Request, res: Response, next: NextFunctio
   try {
     const result = await businessHoursController(req);
     if ('error' in result) {
-      // It's an ErrorResponse
-      const { statusCode, error, details } = result;
-      res.status(statusCode).json({ error, details });
+      const { error, message } = result;
+      const statusCode = error === 'InvalidParameters' ? 400 : 500;
+      res.status(statusCode).json({ error, message });
     } else {
-      // It's a BusinessHoursResponse
-      const { statusCode, result: responseResult } = result;
-      res.status(statusCode).json(responseResult);
+      res.status(200).json(result);
     }
   } catch (error) {
     next(error);
   }
 });
 
-
 app.use((req: Request, res: Response) => {
-  res.status(404).json({ error: 'Not Found' });
+  res.status(404).json({ error: 'NotFound', message: 'Endpoint not found' });
 });
+
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
   res.status(500).json({ 
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: 'InternalServerError',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
