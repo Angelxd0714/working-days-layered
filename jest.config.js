@@ -14,5 +14,6 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  testTimeout: 30000
+  testTimeout: 30000,
+  setupFilesAfterEnv: ['<rootDir>/src/setupTests.ts']
 };

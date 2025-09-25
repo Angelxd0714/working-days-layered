@@ -8,13 +8,12 @@ jest.mock('../../src/services/businessHoursService', () => ({
 describe('businessHoursController - Parameter Validation', () => {
   
   describe('Missing parameters', () => {
-    it('should return error when no parameters provided', async () => {
+    it('should use default values when no parameters provided', async () => {
       const req = { query: {} as BusinessHoursRequest };
       const result = await businessHoursController(req);
       
       expect(result).toEqual({
-        error: 'InvalidParameters',
-        message: "At least one of 'days' or 'hours' parameters is required"
+        date: '2025-08-01T14:00:00.000Z'
       });
     });
   });

@@ -137,8 +137,8 @@ const serverlessConfiguration = {
             request: {
               parameters: {
                 querystrings: {
-                  days: true,
-                  hours: true,
+                  days: false,
+                  hours: false,
                   date: false
                 }
               }

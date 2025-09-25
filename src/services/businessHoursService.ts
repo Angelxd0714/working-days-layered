@@ -7,6 +7,8 @@ import {
   setSeconds,
   setMilliseconds,
   format,
+  getHours,
+  getMinutes,
 } from "date-fns";
 import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { getHolidays } from "../utils/holidays";
@@ -32,7 +34,8 @@ function normalizeToBusinessHours(date: Date, holidays: string[]): Date {
     currentDate = addDays(currentDate, -1);
   }
 
-  const currentHour = currentDate.getHours();
+  const currentHour = getHours(currentDate);
+  const currentMinute = getMinutes(currentDate);
 
   if (currentHour < BUSINESS_HOURS.start) {
     currentDate = setHours(currentDate, BUSINESS_HOURS.start);
@@ -48,6 +51,78 @@ function normalizeToBusinessHours(date: Date, holidays: string[]): Date {
   }
   else if (currentHour >= BUSINESS_HOURS.lunchStart && currentHour < BUSINESS_HOURS.lunchEnd) {
     currentDate = setHours(currentDate, BUSINESS_HOURS.lunchEnd);
+    currentDate = setMinutes(currentDate, 0);
+    currentDate = setSeconds(currentDate, 0);
+    currentDate = setMilliseconds(currentDate, 0);
+  }
+  else {
+    currentDate = setSeconds(currentDate, 0);
+    currentDate = setMilliseconds(currentDate, 0);
+  }
+
+  return currentDate;
+}
+
+function addBusinessDays(startDate: Date, daysToAdd: number, holidays: string[]): Date {
+  let currentDate = new Date(startDate);
+  let remainingDays = daysToAdd;
+
+  while (remainingDays > 0) {
+    currentDate = addDays(currentDate, 1);
+    if (isBusinessDay(currentDate, holidays)) {
+      remainingDays--;
+    }
+  }
+
+  return currentDate;
+}
+
+function addBusinessHours(startDate: Date, hoursToAdd: number, holidays: string[]): Date {
+  let currentDate = new Date(startDate);
+  let remainingHours = hoursToAdd;
+
+  while (remainingHours > 0) {
+    const currentHour = getHours(currentDate);
+
+    if (currentHour < BUSINESS_HOURS.start || currentHour >= BUSINESS_HOURS.end) {
+      do {
+        currentDate = addDays(currentDate, 1);
+      } while (!isBusinessDay(currentDate, holidays));
+
+      currentDate = setHours(currentDate, BUSINESS_HOURS.start);
+      currentDate = setMinutes(currentDate, 0);
+      currentDate = setSeconds(currentDate, 0);
+      currentDate = setMilliseconds(currentDate, 0);
+      continue;
+    }
+
+    if (currentHour >= BUSINESS_HOURS.lunchStart && currentHour < BUSINESS_HOURS.lunchEnd) {
+      currentDate = setHours(currentDate, BUSINESS_HOURS.lunchEnd);
+      currentDate = setMinutes(currentDate, 0);
+      currentDate = setSeconds(currentDate, 0);
+      currentDate = setMilliseconds(currentDate, 0);
+      continue;
+    }
+
+    currentDate = addHours(currentDate, 1);
+    remainingHours--;
+
+    const newHour = getHours(currentDate);
+    if (newHour === BUSINESS_HOURS.lunchStart) {
+      currentDate = setHours(currentDate, BUSINESS_HOURS.lunchEnd);
+      currentDate = setMinutes(currentDate, 0);
+      currentDate = setSeconds(currentDate, 0);
+      currentDate = setMilliseconds(currentDate, 0);
+    }
+  }
+
+  const finalHour = getHours(currentDate);
+  if (finalHour >= BUSINESS_HOURS.end) {
+    do {
+      currentDate = addDays(currentDate, 1);
+    } while (!isBusinessDay(currentDate, holidays));
+
+    currentDate = setHours(currentDate, BUSINESS_HOURS.start);
     currentDate = setMinutes(currentDate, 0);
     currentDate = setSeconds(currentDate, 0);
     currentDate = setMilliseconds(currentDate, 0);
@@ -74,60 +149,12 @@ async function calculateBusinessHours(
 
     currentDate = normalizeToBusinessHours(currentDate, holidays);
 
-    let remainingDays = dayToAdd;
-    while (remainingDays > 0) {
-      currentDate = addDays(currentDate, 1);
-      if (isBusinessDay(currentDate, holidays)) {
-        remainingDays--;
-      }
+    if (dayToAdd > 0) {
+      currentDate = addBusinessDays(currentDate, dayToAdd, holidays);
     }
 
-    let remainingHours = hourToAdd;
-    while (remainingHours > 0) {
-      const currentHour = currentDate.getHours();
-
-      if (currentHour < BUSINESS_HOURS.start || currentHour >= BUSINESS_HOURS.end) {
-        do {
-          currentDate = addDays(currentDate, 1);
-        } while (!isBusinessDay(currentDate, holidays));
-
-        currentDate = setHours(currentDate, BUSINESS_HOURS.start);
-        currentDate = setMinutes(currentDate, 0);
-        currentDate = setSeconds(currentDate, 0);
-        currentDate = setMilliseconds(currentDate, 0);
-      }
-
-      // If during lunch break, move to end of lunch
-      if (currentHour >= BUSINESS_HOURS.lunchStart && currentHour < BUSINESS_HOURS.lunchEnd) {
-        currentDate = setHours(currentDate, BUSINESS_HOURS.lunchEnd);
-        currentDate = setMinutes(currentDate, 0);
-        currentDate = setSeconds(currentDate, 0);
-        currentDate = setMilliseconds(currentDate, 0);
-      }
-
-      currentDate = addHours(currentDate, 1);
-
-      const newHour = currentDate.getHours();
-      if (newHour === BUSINESS_HOURS.lunchStart) {
-        currentDate = setHours(currentDate, BUSINESS_HOURS.lunchEnd);
-        currentDate = setMinutes(currentDate, 0);
-        currentDate = setSeconds(currentDate, 0);
-        currentDate = setMilliseconds(currentDate, 0);
-      }
-
-      remainingHours--;
-    }
-
-    const finalHour = currentDate.getHours();
-    if (finalHour >= BUSINESS_HOURS.end) {
-      do {
-        currentDate = addDays(currentDate, 1);
-      } while (!isBusinessDay(currentDate, holidays));
-
-      currentDate = setHours(currentDate, BUSINESS_HOURS.start);
-      currentDate = setMinutes(currentDate, 0);
-      currentDate = setSeconds(currentDate, 0);
-      currentDate = setMilliseconds(currentDate, 0);
+    if (hourToAdd > 0) {
+      currentDate = addBusinessHours(currentDate, hourToAdd, holidays);
     }
 
     return fromZonedTime(currentDate, TIME_ZONE);

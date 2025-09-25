@@ -55,10 +55,8 @@ export const businessHoursController = async (
     }
 
     if (!hasValidDays && !hasValidHours) {
-      return createErrorResponse(
-        "InvalidParameters", 
-        "At least one of 'days' or 'hours' parameters is required"
-      );
+      daysValue = 1;
+      hoursValue = 0;
     }
 
     let startDate: Date;

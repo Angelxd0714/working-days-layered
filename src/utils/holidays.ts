@@ -1,21 +1,17 @@
-import fetch from 'node-fetch';
-
 const HOLIDAYS_API_URL = 'https://content.capta.co/Recruitment/WorkingDays.json';
 
 export async function getHolidays(): Promise<string[]> {
   try {
     const response = await fetch(HOLIDAYS_API_URL);
     if (!response.ok) {
-      throw new Error('Network response was not ok');
+      throw new Error(`Network response was not ok: ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json() as unknown;
     if (!Array.isArray(data) || !data.every((item: unknown) => typeof item === 'string')) {
-      throw new Error('Invalid data format');
+      throw new Error('Invalid data format: expected array of strings');
     }
     return data;
   } catch (error) {
-    // Log the error for debugging purposes
-    // eslint-disable-next-line no-console
     console.error('Error fetching holidays:', error);
     throw error;
   }
