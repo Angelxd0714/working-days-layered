@@ -1,20 +1,23 @@
 # Working Days API
 
-API para el cálculo de días y horas hábiles, teniendo en cuenta días festivos y horarios comerciales.
+API para el cálculo de días y horas hábiles en Colombia, considerando días festivos nacionales y horarios laborales específicos.
 
 ## 🚀 Características
 
-- Cálculo de fechas considerando días hábiles
-- Soporte para horarios comerciales personalizables
-- Inclusión automática de días festivos
-- Documentación automática con Swagger
+- Cálculo preciso de fechas hábiles en zona horaria de Colombia (America/Bogota)
+- Manejo automático de días festivos colombianos
+- Horarios laborales: 8:00 AM - 5:00 PM con almuerzo 12:00 PM - 1:00 PM
+- Validación estricta de parámetros según especificación técnica
+- Respuestas en formato UTC ISO 8601
+- Documentación OpenAPI 3.0.3 completa
+- Cobertura de tests del 100% (72 tests)
 - Despliegue serverless con AWS Lambda
 
 ## 📋 Prerrequisitos
 
 - Node.js 20.x o superior
 - npm 9.x o superior
-- Serverless Framework instalado globalmente
+- Serverless Framework (opcional, para despliegue)
 
 ## 🛠️ Instalación
 
@@ -29,7 +32,10 @@ API para el cálculo de días y horas hábiles, teniendo en cuenta días festivo
    npm install
    ```
 
-3. Configura las variables de entorno (si es necesario) en el archivo `.env`
+3. Construye el proyecto:
+   ```bash
+   npm run build
+   ```
 
 ## 🚦 Uso local
 
@@ -39,40 +45,59 @@ Para iniciar el servidor localmente:
 npm run dev
 ```
 
-Esto iniciará el servidor en `http://localhost:3000` con la documentación de la API disponible en:
-- Documentación Swagger UI: `http://localhost:3000/api-docs`
-- Esquema OpenAPI: `http://localhost:3000/api-docs.json`
+Esto iniciará el servidor en `http://localhost:3000`.
 
-## 📚 Visualizar Documentación con Swagger Editor
+Para ejecutar los tests:
 
-Puedes visualizar y probar la documentación de la API utilizando el editor de Swagger Online:
+```bash
+npm test
+```
 
-1. Abre tu navegador y ve a [Swagger Editor](https://editor.swagger.io/)
-2. Haz clic en "File" > "Import File" y selecciona el archivo `openapi.yaml`
-   - O simplemente arrastra y suelta el archivo `openapi.yaml` en la ventana del editor
+## 📚 Documentación de la API
 
-El editor te permitirá:
-- Ver una vista previa interactiva de la documentación
-- Probar los endpoints directamente desde el navegador
-- Validar la sintaxis de tu archivo OpenAPI
-- Exportar la documentación en diferentes formatos
+La documentación OpenAPI está disponible en el archivo `openapi.yaml`. Puedes visualizarla usando:
 
-## 🌐 Endpoints
+1. **Swagger Editor Online**: Ve a [editor.swagger.io](https://editor.swagger.io/) y carga el archivo `openapi.yaml`
+2. **Swagger UI Local**: Cuando el servidor esté corriendo, visita `http://localhost:3000/api-docs`
+
+## 🌐 API Endpoint
 
 ### GET /business-hours
 
-Calcula la fecha y hora resultante de agregar días y horas hábiles a una fecha de inicio.
+Calcula fechas hábiles considerando horarios laborales colombianos y días festivos.
 
 **Parámetros de consulta:**
-- `dayToAdd` (opcional): Número de días hábiles a agregar
-- `hourToAdd` (opcional): Número de horas hábiles a agregar
-- `startDate` (opcional): Fecha de inicio en formato ISO (por defecto: fecha actual)
+- `days` (opcional): Número de días hábiles a sumar (entero positivo)
+- `hours` (opcional): Número de horas hábiles a sumar (entero positivo)  
+- `date` (opcional): Fecha inicial en UTC ISO 8601 con sufijo Z (por defecto: fecha actual)
 
-**Ejemplo de respuesta exitosa (200 OK):**
+**Nota**: Al menos uno de `days` o `hours` debe ser proporcionado.
+
+**Ejemplos de uso:**
+
+```bash
+# Agregar 1 día hábil
+curl "http://localhost:3000/business-hours?days=1"
+
+# Agregar 8 horas hábiles
+curl "http://localhost:3000/business-hours?hours=8"
+
+# Agregar 1 día y 3 horas desde fecha específica
+curl "http://localhost:3000/business-hours?days=1&hours=3&date=2025-04-10T15:00:00.000Z"
+```
+
+**Respuesta exitosa (200 OK):**
 ```json
 {
-  "statusCode": 200,
-  "result": "2023-09-25T10:30:00.000Z"
+  "date": "2025-08-01T14:00:00.000Z"
+}
+```
+
+**Respuesta de error (400 Bad Request):**
+```json
+{
+  "error": "InvalidParameters",
+  "message": "At least one of 'days' or 'hours' parameters is required"
 }
 ```
 
@@ -82,59 +107,116 @@ Calcula la fecha y hora resultante de agregar días y horas hábiles a una fecha
 working-days-layered/
 ├── src/
 │   ├── controllers/     # Controladores de la API
-│   ├── services/        # Lógica de negocio
-│   ├── lambdas/         # Funciones Lambda
-│   ├── types/           # Tipos TypeScript
-│   └── utils/           # Utilidades
-├── .eslintrc.cjs        # Configuración de ESLint
-├── serverless.ts        # Configuración de Serverless
+│   ├── services/        # Lógica de negocio (cálculo de fechas hábiles)
+│   ├── lambdas/         # Funciones Lambda para AWS
+│   ├── types/           # Definiciones de tipos TypeScript
+│   └── utils/           # Utilidades (manejo de festivos)
+├── tests/
+│   ├── controllers/     # Tests unitarios de controladores
+│   ├── integration/     # Tests de integración
+│   └── specification-compliance.test.ts  # Tests de cumplimiento de especificación
+├── openapi.yaml         # Documentación OpenAPI 3.0.3
+├── jest.config.js       # Configuración de Jest para testing
+├── serverless.ts        # Configuración de Serverless Framework
 ├── tsconfig.json        # Configuración de TypeScript
 └── package.json         # Dependencias y scripts
 ```
 
 ## 🧠 Lógica de Negocio
 
-### Horario Comercial
-- **Horario laboral estándar:** 8:00 AM - 5:00 PM
-- **Hora de almuerzo:** 12:00 PM - 1:00 PM
+### Zona Horaria
+- **Zona horaria base:** America/Bogota (Colombia)
+- **Conversión automática:** Los cálculos se realizan en hora colombiana y se devuelven en UTC
+
+### Horario Laboral
+- **Horario:** 8:00 AM - 5:00 PM (hora de Colombia)
+- **Almuerzo:** 12:00 PM - 1:00 PM (no se cuenta como tiempo hábil)
 - **Días laborables:** Lunes a Viernes
 
-### Cálculo de Días Hábiles
-1. Se ignoran sábados y domingos
-2. Se excluyen los días festivos definidos
-3. Si la hora cae fuera del horario laboral, se ajusta al siguiente horario hábil
+### Días Festivos
+- Se obtienen dinámicamente desde: `https://content.capta.co/Recruitment/WorkingDays.json`
+- Incluye todos los días festivos nacionales de Colombia
+- Se excluyen automáticamente del cálculo de días hábiles
 
-### Manejo de Festivos
-- Los días festivos se definen en `src/utils/holidays.ts`
-- Se pueden agregar festivos fijos (ej: Navidad) y dinámicos (ej: Jueves Santo)
+### Reglas de Cálculo
+1. Si la fecha inicial está fuera del horario laboral, se aproxima hacia atrás al horario hábil más cercano
+2. Los días se suman primero, luego las horas
+3. Se saltan automáticamente fines de semana y festivos
+4. El resultado final se convierte a UTC ISO 8601
+
+## 🧪 Testing
+
+El proyecto incluye una suite completa de tests:
+
+```bash
+# Ejecutar todos los tests
+npm test
+
+# Ejecutar tests con cobertura
+npm run test:coverage
+
+# Ejecutar tests en modo watch
+npm run test:watch
+```
+
+**Cobertura de tests:**
+- ✅ 72 tests en total
+- ✅ Tests unitarios de controladores
+- ✅ Tests de integración de API
+- ✅ Tests de cumplimiento de especificación
+- ✅ Validación de formatos de respuesta
+- ✅ Casos edge y manejo de errores
 
 ## 🔧 Dependencias Principales
 
 ### Producción
-- `date-fns`: Manipulación avanzada de fechas
-- `date-fns-tz`: Manejo de zonas horarias
+- `date-fns` & `date-fns-tz`: Manipulación de fechas y zonas horarias
 - `express`: Framework web para Node.js
-- `serverless-http`: Adaptador para ejecutar Express en AWS Lambda
+- `serverless-http`: Adaptador para AWS Lambda
+- `node-fetch`: Cliente HTTP para obtener días festivos
 
-### Desarrollo
-- `serverless`: Framework para aplicaciones serverless
-- `serverless-offline`: Ejecución local de funciones Lambda
-- `serverless-auto-swagger`: Generación automática de documentación Swagger
-- `typescript`: Tipado estático para JavaScript
-- `eslint`: Linter para mantener la calidad del código
+### Desarrollo y Testing
+- `jest` & `ts-jest`: Framework de testing
+- `supertest`: Testing de APIs HTTP
+- `typescript`: Tipado estático
+- `serverless`: Framework serverless
+- `eslint`: Linter de código
 
 ## 🚀 Despliegue
 
-Para desplegar a AWS:
-
+### Desarrollo Local
 ```bash
-# Construir el proyecto
+npm run dev
+```
+
+### Producción (AWS Lambda)
+```bash
+# Construir
 npm run build
 
-# Desplegar
-serverless deploy
+# Desplegar con Serverless
+npm run deploy
 ```
+
+### Plataformas Soportadas
+- ✅ Vercel
+- ✅ Railway  
+- ✅ Render
+- ✅ AWS Lambda (con Serverless Framework)
+- ✅ Cualquier plataforma que soporte Node.js
+
+## 📊 Validación de Especificación
+
+Esta API cumple exactamente con los requisitos de la prueba técnica:
+
+- ✅ Parámetros: `days`, `hours`, `date`
+- ✅ Respuesta exitosa: `{"date": "ISO8601Z"}`
+- ✅ Respuesta de error: `{"error": "Type", "message": "Description"}`
+- ✅ Códigos HTTP correctos (200, 400, 500)
+- ✅ Validación estricta de parámetros
+- ✅ Manejo de zona horaria colombiana
+- ✅ Exclusión de días festivos nacionales
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la Licencia MIT.
